@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Candidate Profile - Voting System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            border-radius: 8px;
+            border-left: 4px solid;
+            font-weight: 500;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border-left-color: #28a745;
+        }
+        
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-left-color: #dc3545;
+        }
+        
+        .form-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .form-section h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+        }
+        
+        .form-section h3::before {
+            content: "✏️";
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            font-family: inherit;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+        
+        .form-group small {
+            display: block;
+            margin-top: 6px;
+            color: #666;
+            font-size: 14px;
+            font-style: italic;
+        }
+        
+        .character-count {
+            text-align: right;
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+        
+        .preview-section {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .preview-section h3 {
+            margin-bottom: 15px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+        }
+        
+        .preview-section h3::before {
+            content: "👁️";
+            margin-right: 10px;
+        }
+        
+        .preview-card {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .preview-field {
+            margin-bottom: 12px;
+        }
+        
+        .preview-field strong {
+            opacity: 0.9;
+        }
+        
+        .btn-container {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 140px;
+            justify-content: center;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+        }
+        
+        .tips-section {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .tips-section h4 {
+            color: #1565c0;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .tips-section h4::before {
+            content: "💡";
+            margin-right: 8px;
+        }
+        
+        .tips-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .tips-list li {
+            padding: 5px 0;
+            color: #1565c0;
+        }
+        
+        .tips-list li::before {
+            content: "✓";
+            color: #4caf50;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .form-section {
+                padding: 20px;
+            }
+            
+            .btn-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Edit Your Profile</h1>
+            <p>Update your campaign information to connect with voters</p>
+        </div>
+        
+        <div class="content">
+            <!-- Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Tips Section -->
+            <div class="tips-section">
+                <h4>Profile Tips</h4>
+                <ul class="tips-list">
+                    <li>Keep your slogan short and memorable</li>
+                    <li>Write a clear manifesto that explains your goals</li>
+                    <li>Be honest and authentic in your promises</li>
+                    <li>Review your profile before saving</li>
+                </ul>
+            </div>
+
+            <form method="post" action="/candidate/profile/">
+                {% csrf_token %}
+                
+                <div class="form-section">
+                    <h3>Basic Information</h3>
+
+                    <div class="form-group">
+                        <label for="slogan">Candidate Slogan</label>
+                        <input type="text" 
+                               id="slogan" 
+                               name="slogan" 
+                               value="{{ candidate_profile.slogan }}" 
+                               placeholder="e.g., 'Together We Rise', 'Voice of Change', 'Students First'"
+                               maxlength="200"
+                               oninput="updateCharCount('slogan', 200)">
+                        <small>A catchy slogan that represents your campaign</small>
+                        <div class="character-count" id="sloganCount">{{ candidate_profile.slogan|length }}/200 characters</div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Candidate Manifesto</h3>
+                    
+                    <div class="form-group">
+                        <label for="manifesto">Your Manifesto</label>
+                        <textarea id="manifesto" 
+                                  name="manifesto" 
+                                  placeholder="Share your vision, goals, and promises. What changes will you bring? What issues will you address? How will you represent student interests?"
+                                  oninput="updateCharCount('manifesto', null)">{{ candidate_profile.manifesto }}</textarea>
+                        <small>Describe your campaign promises, goals, and what you plan to achieve for students</small>
+                        <div class="character-count" id="manifestoCount">{{ candidate_profile.manifesto|length }} characters</div>
+                    </div>
+                </div>
+
+                <!-- Live Preview -->
+                <div class="preview-section">
+                    <h3>How Voters Will See Your Profile</h3>
+                    <div class="preview-card">
+                        <div class="preview-field">
+                            <strong>Candidate:</strong> {{ user_name }}
+                        </div>
+                        <div class="preview-field">
+                            <strong>Party:</strong> <span id="previewParty">{{ candidate_profile.party|default:"Independent" }}</span>
+                        </div>
+                        <div class="preview-field">
+                            <strong>Slogan:</strong> <span id="previewSlogan">{{ candidate_profile.slogan|default:"No slogan set" }}</span>
+                        </div>
+                        <div class="preview-field">
+                            <strong>Manifesto:</strong> 
+                            <div id="previewManifesto" style="margin-top: 8px; line-height: 1.5;">
+                                {% if candidate_profile.manifesto %}
+                                    {{ candidate_profile.manifesto|truncatewords:30 }}
+                                {% else %}
+                                    No manifesto added yet
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="btn-container">
+                    <button type="submit" class="btn btn-primary">
+                        💾 Save Profile
+                    </button>
+                    <a href="{% url 'candidate_dashboard' %}" class="btn btn-secondary">
+                        ← Back to Dashboard
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Character counter function
+        function updateCharCount(fieldId, maxLength) {
+            const field = document.getElementById(fieldId);
+            const countElement = document.getElementById(fieldId + 'Count');
+            const currentLength = field.value.length;
+            
+            if (maxLength) {
+                countElement.textContent = currentLength + '/' + maxLength + ' characters';
+                if (currentLength > maxLength * 0.9) {
+                    countElement.style.color = '#dc3545';
+                } else {
+                    countElement.style.color = '#999';
+                }
+            } else {
+                countElement.textContent = currentLength + ' characters';
+            }
+        }
+
+        // Live preview updates
+        document.getElementById('party').addEventListener('input', function() {
+            const preview = document.getElementById('previewParty');
+            preview.textContent = this.value || 'Independent';
+        });
+
+        document.getElementById('slogan').addEventListener('input', function() {
+            const preview = document.getElementById('previewSlogan');
+            preview.textContent = this.value || 'No slogan set';
+        });
+
+        document.getElementById('manifesto').addEventListener('input', function() {
+            const preview = document.getElementById('previewManifesto');
+            if (this.value) {
+                // Simple word truncation for preview
+                const words = this.value.split(' ');
+                const truncated = words.slice(0, 30).join(' ');
+                preview.textContent = truncated + (words.length > 30 ? '...' : '');
+            } else {
+                preview.textContent = 'No manifesto added yet';
+            }
+        });
+
+        // Form validation
+        document.getElementById('profileForm').addEventListener('submit', function(e) {
+            const slogan = document.getElementById('slogan').value;
+            if (slogan.length > 200) {
+                e.preventDefault();
+                alert('Slogan must be 200 characters or less');
+                return false;
+            }
+        });
+
+        // Initialize character counts on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCharCount('slogan', 200);
+            updateCharCount('manifesto', null);
+        });
+    </script>
+</body>
+</html>
