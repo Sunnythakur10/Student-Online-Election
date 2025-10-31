@@ -20,9 +20,15 @@ class VoterProfileAdmin(admin.ModelAdmin):
 
 @admin.register(CandidateProfile)
 class CandidateProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'votes_received')
-    search_fields = ('user__username', 'user__email')
+    list_display = ('user', 'slogan', 'votes_received')
+    search_fields = ('user__username', 'user__email', 'slogan')
     readonly_fields = ('votes_received',)
+    fields = ('user', 'slogan', 'manifesto', 'votes_received')
+    
+    # Optional: Show slogan preview in list
+    def slogan_preview(self, obj):
+        return obj.slogan[:50] + '...' if len(obj.slogan) > 50 else obj.slogan
+    slogan_preview.short_description = 'Slogan'
 
 @admin.register(Election)
 class ElectionAdmin(admin.ModelAdmin):
