@@ -89,15 +89,24 @@ def send_verification_view(request):
             # Build verification URL with signed token
             verification_url = f"{request.build_absolute_uri('/verify-login/')}?token={signed_token}"
             
-            # Send email
-            send_mail(
-                'Login Link - Voting System',
-                f'Click this link to login: {verification_url}\n\nThis link will expire in 15 minutes and can only be used once.',
-                settings.EMAIL_HOST_USER if hasattr(settings, 'EMAIL_HOST_USER') else 'noreply@votingsystem.com',
-                [email],
-                fail_silently=False,
-            )
-            messages.success(request, 'Verification link sent! Check your email. Link expires in 15 minutes.')
+            # Send email with timeout and error handling
+            try:
+                send_mail(
+                    'Login Link - Voting System',
+                    f'Click this link to login: {verification_url}\n\nThis link will expire in 15 minutes and can only be used once.',
+                    settings.EMAIL_HOST_USER if hasattr(settings, 'EMAIL_HOST_USER') else 'noreply@votingsystem.com',
+                    [email],
+                    fail_silently=False,
+                )
+                messages.success(request, 'Verification link sent! Check your email. Link expires in 15 minutes.')
+            except Exception as email_error:
+                # If email fails, show the link in the message (development fallback)
+                print(f"Email error: {email_error}")
+                print(f"Login link for {email}: {verification_url}")
+                if settings.DEBUG:
+                    messages.warning(request, f'Email failed. Development link: {verification_url}')
+                else:
+                    messages.error(request, 'Failed to send email. Please try again or contact support.')
         except CustomUser.DoesNotExist:
             messages.error(request, 'Email not found.')
         except Exception as e:
