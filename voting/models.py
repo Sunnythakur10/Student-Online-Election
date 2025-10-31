@@ -2,6 +2,8 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from datetime import timedelta
+import secrets
 
 class CustomUser(AbstractUser):
     ROLE_CHOICES = (
@@ -101,3 +103,61 @@ class Vote(models.Model):
         
         # Update candidate's vote count
         self.candidate.update_vote_count()
+
+
+class LoginToken(models.Model):
+    """
+    Stores email login tokens with expiry and single-use enforcement.
+    Replaces session-based token storage for secure, stateless authentication.
+    """
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='login_tokens')
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    used_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['token', 'is_used']),
+            models.Index(fields=['expires_at']),
+        ]
+    
+    def __str__(self):
+        return f"LoginToken for {self.user.email} - {'Used' if self.is_used else 'Active'}"
+    
+    def is_valid(self):
+        """Check if token is still valid (not expired and not used)"""
+        now = timezone.now()
+        return not self.is_used and self.expires_at > now
+    
+    def mark_as_used(self):
+        """Mark token as used (single-use enforcement)"""
+        self.is_used = True
+        self.used_at = timezone.now()
+        self.save(update_fields=['is_used', 'used_at'])
+    
+    @classmethod
+    def create_token(cls, user, expiry_minutes=15):
+        """
+        Create a new login token for a user with specified expiry.
+        Default expiry is 15 minutes.
+        """
+        token = secrets.token_urlsafe(48)  # Cryptographically secure random token
+        expires_at = timezone.now() + timedelta(minutes=expiry_minutes)
+        
+        return cls.objects.create(
+            user=user,
+            token=token,
+            expires_at=expires_at
+        )
+    
+    @classmethod
+    def cleanup_expired(cls):
+        """Remove expired and used tokens older than 7 days"""
+        cutoff_date = timezone.now() - timedelta(days=7)
+        cls.objects.filter(
+            models.Q(expires_at__lt=timezone.now()) | models.Q(is_used=True),
+            created_at__lt=cutoff_date
+        ).delete()

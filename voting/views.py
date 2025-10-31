@@ -7,8 +7,9 @@ from django.utils import timezone
 from django.db import transaction
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.core.signing import Signer, BadSignature
 import secrets
-from .models import CustomUser, VoterProfile, CandidateProfile, Election, Vote
+from .models import CustomUser, VoterProfile, CandidateProfile, Election, Vote, LoginToken
 from django.contrib import messages
 from django.urls import reverse
 
@@ -69,23 +70,34 @@ def register_view(request):
     
 
 def send_verification_view(request):
+    """
+    Send email login link with secure token.
+    Uses LoginToken model for stateless, expiring, single-use tokens.
+    """
     if request.method == 'POST':
         email = request.POST.get('email')
         try:
             user = CustomUser.objects.get(email=email)
-            token = secrets.token_urlsafe(32)
-            request.session['verification_token'] = token
-            request.session['verification_email'] = email
             
-            verification_url = f"{request.build_absolute_uri('/verify-login/')}?token={token}"
+            # Create a new login token (15 minute expiry by default)
+            login_token = LoginToken.create_token(user, expiry_minutes=15)
+            
+            # Sign the token for additional security (prevents tampering)
+            signer = Signer()
+            signed_token = signer.sign(login_token.token)
+            
+            # Build verification URL with signed token
+            verification_url = f"{request.build_absolute_uri('/verify-login/')}?token={signed_token}"
+            
+            # Send email
             send_mail(
                 'Login Link - Voting System',
-                f'Click this link to login: {verification_url}',
+                f'Click this link to login: {verification_url}\n\nThis link will expire in 15 minutes and can only be used once.',
                 settings.EMAIL_HOST_USER if hasattr(settings, 'EMAIL_HOST_USER') else 'noreply@votingsystem.com',
                 [email],
                 fail_silently=False,
             )
-            messages.success(request, 'Verification link sent!')
+            messages.success(request, 'Verification link sent! Check your email. Link expires in 15 minutes.')
         except CustomUser.DoesNotExist:
             messages.error(request, 'Email not found.')
         except Exception as e:
@@ -93,23 +105,57 @@ def send_verification_view(request):
     return redirect('login')
 
 def verify_login_view(request):
-    token = request.GET.get('token')
-    if token and request.session.get('verification_token') == token:
-        email = request.session.get('verification_email')
+    """
+    Verify login token from email link.
+    Validates signature, checks token validity, enforces single-use.
+    """
+    signed_token = request.GET.get('token')
+    
+    if not signed_token:
+        messages.error(request, 'No token provided.')
+        return redirect('login')
+    
+    try:
+        # Verify signature
+        signer = Signer()
+        token = signer.unsign(signed_token)
+        
+        # Look up token in database
         try:
-            user = CustomUser.objects.get(email=email)
-            login(request, user)
-            request.session.pop('verification_token', None)
-            request.session.pop('verification_email', None)
-            
-            if user.role == 'candidate':
-                return redirect('/candidate/dashboard/')  
-            return redirect('dashboard')
-        except CustomUser.DoesNotExist:
-            messages.error(request, 'Invalid link.')
-    else:
-        messages.error(request, 'Invalid or expired link.')
-    return redirect('login')
+            login_token = LoginToken.objects.get(token=token)
+        except LoginToken.DoesNotExist:
+            messages.error(request, 'Invalid login link.')
+            return redirect('login')
+        
+        # Check if token is valid (not expired, not used)
+        if not login_token.is_valid():
+            if login_token.is_used:
+                messages.error(request, 'This login link has already been used.')
+            else:
+                messages.error(request, 'This login link has expired.')
+            return redirect('login')
+        
+        # Mark token as used (single-use enforcement)
+        login_token.mark_as_used()
+        
+        # Log the user in
+        user = login_token.user
+        login(request, user)
+        
+        messages.success(request, f'Welcome back, {user.first_name or user.username}!')
+        
+        # Redirect based on role
+        if user.role == 'candidate':
+            return redirect('/candidate/dashboard/')
+        # All users (including admins) go to dashboard
+        return redirect('dashboard')
+        
+    except BadSignature:
+        messages.error(request, 'Invalid or tampered login link.')
+        return redirect('login')
+    except Exception as e:
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('login')
 
 @login_required
 def dashboard_view(request):
